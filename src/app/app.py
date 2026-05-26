@@ -7,7 +7,7 @@ import sys
 # Ensure we can import from src/serving when running "uvicorn src.app.app:app"
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from serving.inference import predict  # our single source of truth for inference
+from service.inference import predict  # our single source of truth for inference
 
 app = FastAPI()
 
