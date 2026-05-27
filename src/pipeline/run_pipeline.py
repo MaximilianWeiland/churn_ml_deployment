@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-"""
-Runs sequentially: load → validate → preprocess → feature engineering
-"""
-
 import os
 import sys
 import time
@@ -18,68 +13,61 @@ from sklearn.metrics import (
 )
 from xgboost import XGBClassifier
 
-# === Fix import path for local modules ===
-# ESSENTIAL: Allows imports from src/ directory structure
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# Local modules - Core pipeline components
-from src.data.load_data import load_data                    # Data loading with error handling
-from src.data.preprocess import preprocess_data            # Basic data cleaning
-from src.features.build_features import build_features     # Feature engineering (CRITICAL for model performance)
-from src.utils.validate_data import validate_telco_data    # Data quality validation
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from src.data.load_data import load_data
+from src.data.preprocess import validate_data, preprocess_data
+from src.features.build_features import build_features
+from data.validate_data import validate_telco_data
 
 def main(args):
     """
-    Main training pipeline function that orchestrates the complete ML workflow.
-    
+    Main training pipeline function.
     """
     
-    # === MLflow Setup - ESSENTIAL for experiment tracking ===
-    # Configure MLflow to use local file-based tracking (not a tracking server)
+    # configure MLflow
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     mlruns_path = args.mlflow_uri or f"file://{project_root}/mlruns"  # Local file-based tracking
     mlflow.set_tracking_uri(mlruns_path)
-    mlflow.set_experiment(args.experiment)  # Creates experiment if doesn't exist
+    mlflow.set_experiment(args.experiment)
 
-    # Start MLflow run - all subsequent logging will be tracked under this run
+    # start the mlflow run
     with mlflow.start_run():
-        # === Log hyperparameters and configuration ===
-        # REQUIRED: These parameters are essential for model reproducibility
-        mlflow.log_param("model", "xgboost")           # Model type for comparison
+        # log hyperparams and configuration
+        mlflow.log_param("model", args.model_name)           # Model type for comparison
         mlflow.log_param("threshold", args.threshold)   # Classification threshold (default: 0.35)
         mlflow.log_param("test_size", args.test_size)   # Train/test split ratio
 
-        # === STAGE 1: Data Loading & Validation ===
-        print("🔄 Loading data...")
-        df = load_data(args.input)  # Load raw CSV data with error handling
-        print(f"✅ Data loaded: {df.shape[0]} rows, {df.shape[1]} columns")
+        # load the data
+        print("Loading data...")
+        df = load_data(args.input)
+        print(f"Data loaded: {df.shape[0]} rows, {df.shape[1]} columns")
 
-        # === CRITICAL: Data Quality Validation ===
-        # This step is ESSENTIAL for production ML - validates data quality before training
-        print("🔍 Validating data quality with Great Expectations...")
-        is_valid, failed = validate_telco_data(df)
-        mlflow.log_metric("data_quality_pass", int(is_valid))  # Track data quality over time
+        # validate the data with great expectations
+        print("Validating data quality with Great Expectations...")
+        is_valid, failed = validate_data(df)
+        mlflow.log_metric("data_quality_pass", int(is_valid))
 
+        # log errors if validation failed
         if not is_valid:
-            # Log validation failures for debugging
             import json
             mlflow.log_text(json.dumps(failed, indent=2), artifact_file="failed_expectations.json")
-            raise ValueError(f"❌ Data quality check failed. Issues: {failed}")
+            raise ValueError(f"Data quality check failed. Issues: {failed}")
         else:
-            print("✅ Data validation passed. Logged to MLflow.")
+            print("Data validation passed. Logged to MLflow.")
 
-        # === STAGE 2: Data Preprocessing ===
-        print("🔧 Preprocessing data...")
-        df = preprocess_data(df)  # Basic cleaning (handle missing values, fix data types)
+        # preprocess the data
+        print("Preprocessing data...")
+        df = preprocess_data(df)
 
-        # Save processed dataset for reproducibility and debugging
-        processed_path = os.path.join(project_root, "data", "processed", "telco_churn_processed.csv")
+        # save processed dataset for reproducibility and debugging
+        processed_path = os.path.join(project_root, "data", "processed", "netflix_churn_processed.csv")
         os.makedirs(os.path.dirname(processed_path), exist_ok=True)
         df.to_csv(processed_path, index=False)
-        print(f"✅ Processed dataset saved to {processed_path} | Shape: {df.shape}")
+        print(f"Processed dataset saved to {processed_path} | Shape: {df.shape}")
 
-        # === STAGE 3: Feature Engineering - CRITICAL for Model Performance ===
-        print("🛠️  Building features...")
+        # apply feature engineering
+        print("Building features...")
         target = args.target
         if target not in df.columns:
             raise ValueError(f"Target column '{target}' not found in data")
@@ -221,11 +209,12 @@ def main(args):
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Run churn pipeline with XGBoost + MLflow")
     p.add_argument("--input", type=str, required=True,
-                   help="path to CSV (e.g., data/raw/Telco-Customer-Churn.csv)")
-    p.add_argument("--target", type=str, default="Churn")
+                   help="path to CSV (e.g., data/raw/netflix_customer_churn.csv)")
+    p.add_argument("--target", type=str, default="churned")
+    p.add_argument("--model_name", type=str, default="xgboost")
     p.add_argument("--threshold", type=float, default=0.35)
     p.add_argument("--test_size", type=float, default=0.2)
-    p.add_argument("--experiment", type=str, default="Telco Churn")
+    p.add_argument("--experiment", type=str, default="Netflix Churn")
     p.add_argument("--mlflow_uri", type=str, default=None,
                     help="override MLflow tracking URI, else uses project_root/mlruns")
 
