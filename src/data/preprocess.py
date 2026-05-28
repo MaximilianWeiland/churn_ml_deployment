@@ -10,13 +10,14 @@ def preprocess_data(df: pd.DataFrame, target_col: str = "churned") -> pd.DataFra
         if col in df.columns:
             df = df.drop(columns=[col])
 
+    # drop monthly fees due to multicollinearity
+    df = df.drop(columns=["monthly_fee"])
+
     # target to 0/1 if it's Yes/No
     if target_col in df.columns and df[target_col].dtype == "object":
         df[target_col] = df[target_col].str.strip().map({"No": 0, "Yes": 1})
 
-    # simple NA strategy:
-    # - numeric: fill with 0
-    # - others: leave for encoders to handle (get_dummies ignores NaN safely)
+    # fill all NAs in numeric columns with 0
     num_cols = df.select_dtypes(include=["number"]).columns
     df[num_cols] = df[num_cols].fillna(0)
 
