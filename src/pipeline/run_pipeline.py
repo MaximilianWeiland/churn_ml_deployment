@@ -132,10 +132,5 @@ if __name__ == "__main__":
     args = p.parse_args()
     main(args)
 
-"""
 # Use this below to run the pipeline:
-
-python scripts/run_pipeline.py \                                            
-    --input data/raw/netflix_customer_churn.csv \
-    --target Churn
-"""
+# python -m src.pipeline.run_pipeline --input data/raw/netflix_customer_churn.csv --target churned

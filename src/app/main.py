@@ -21,7 +21,6 @@ class CustomerData(BaseModel):
     last_login_days: int
     region: str
     device: str
-    monthly_fee: float
     payment_method: str
     number_of_profiles: int
     avg_watch_time_per_day: float
@@ -49,7 +48,6 @@ def gradio_interface(
         "last_login_days": last_login_days,
         "region": region,
         "device": device,
-        "monthly_fee": monthly_fee,
         "payment_method": payment_method,
         "number_of_profiles": number_of_profiles,
         "avg_watch_time_per_day": avg_watch_time_per_day,
@@ -67,7 +65,6 @@ demo = gr.Interface(
         gr.Number(label="Last Login Days", value=1, minimum=1),
         gr.Dropdown(["Africa", "Europe", "Asia", "Oceania", "South America", "North America"], label="Region", value="Europe"),
         gr.Dropdown(["TV", "Mobile", "Laptop", "Desktop", "Tablet"], label="Device", value="Laptop"),
-        gr.Number(label="Monthly Fee", value=13.99, minimum=0, maximum=20),
         gr.Dropdown(["Gift Card", "Crypto", "Debit Card", "PayPal", "Credit Card"], label="Payment Method", value="Credit Card"),
         gr.Number(label="Number of Profiles", value=1, minimum=0, maximum=5),
         gr.Number(label="Avg. Watch Time per Day", value=1, minimum=0, maximum=500),

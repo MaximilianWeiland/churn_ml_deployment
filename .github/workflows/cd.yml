@@ -26,5 +26,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/ml-deployment:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/ml-deployment:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/netflix-churn-classifiction:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/netflix-churn-classifiction:${{ github.sha }}

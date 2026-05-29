@@ -1,79 +1,59 @@
-import great_expectations as ge
+import pandas as pd
 from typing import Tuple, List
 
 
-def validate_data(df) -> Tuple[bool, List[str]]:
-    """
-    Comprehensive data validation using Great Expectations.
-    
-    This function implements critical data quality checks that must pass before model training.
-    It validates data integrity, business logic constraints, and statistical properties
-    that the ML model expects.
-    
-    """
-    print("Starting data validation with Great Expectations...")
-    
-    # convert pandas DataFrame to Great Expectations Dataset
-    ge_df = ge.dataset.PandasDataset(df)
-    
-    # validate existence of all required columns
-    print("Validating schema and required columns...")
-    ge_df.expect_column_to_exist("customer_id")
-    ge_df.expect_column_to_exist("gender") 
-    ge_df.expect_column_to_exist("age") 
-    ge_df.expect_column_to_exist("subscription_type")
-    ge_df.expect_column_to_exist("watch_hours")
-    ge_df.expect_column_to_exist("last_login_days")
-    ge_df.expect_column_to_exist("region")
-    ge_df.expect_column_to_exist("device")
-    ge_df.expect_column_to_exist("monthly_fee")
-    ge_df.expect_column_to_exist("payment_method")
-    ge_df.expect_column_to_exist("number_of_profiles")
-    ge_df.expect_column_to_exist("avg_watch_time_per_day")
-    ge_df.expect_column_to_exist("favorite_genre")
-    ge_df.expect_column_to_exist("churned")
-    
-    # validate the target column
-    ge_df.expect_column_values_to_be_in_set("churned", [0, 1])
+REQUIRED_COLUMNS = [
+    "customer_id", "age", "gender", "subscription_type", "watch_hours",
+    "last_login_days", "region", "device", "monthly_fee", "payment_method",
+    "number_of_profiles", "avg_watch_time_per_day", "favorite_genre", "churned",
+]
 
-    # validate categorical column values
-    print("Validating unique column values...") 
-    ge_df.expect_column_values_to_be_in_set("gender", ["Male", "Female", "Other"])
-    ge_df.expect_column_values_to_be_in_set("subscription_type", ['Basic', 'Standard', 'Premium'])
-    ge_df.expect_column_values_to_be_in_set("region", ['Africa', 'Europe', 'Asia', 'Oceania', 'South America', 'North America'])
-    ge_df.expect_column_values_to_be_in_set("device", ['TV', 'Mobile', 'Laptop', 'Desktop', 'Tablet'])
-    ge_df.expect_column_values_to_be_in_set("payment_method", ['Gift Card', 'Crypto', 'Debit Card', 'PayPal', 'Credit Card'])
-    ge_df.expect_column_values_to_be_in_set("favorite_genre", ['Action', 'Sci-Fi', 'Drama', 'Horror', 'Romance', 'Comedy', 'Documentary'])
+VALID_VALUES = {
+    "churned": {0, 1},
+    "gender": {"Male", "Female", "Other"},
+    "subscription_type": {"Basic", "Standard", "Premium"},
+    "region": {"Africa", "Europe", "Asia", "Oceania", "South America", "North America"},
+    "device": {"TV", "Mobile", "Laptop", "Desktop", "Tablet"},
+    "payment_method": {"Gift Card", "Crypto", "Debit Card", "PayPal", "Credit Card"},
+    "favorite_genre": {"Action", "Sci-Fi", "Drama", "Horror", "Romance", "Comedy", "Documentary"},
+}
 
-    # validate numerical column values
-    ge_df.expect_column_values_to_be_between("age", min_value=12, max_value=120)
-    ge_df.expect_column_values_to_be_between("watch_hours", min_value=0)
-    ge_df.expect_column_values_to_be_between("last_login_days", min_value=0)
-    ge_df.expect_column_values_to_be_between("monthly_fee", min_value=0, max_value=20)
-    ge_df.expect_column_values_to_be_between("number_of_profiles", min_value=1, max_value=5)
-    ge_df.expect_column_values_to_be_between("avg_watch_time_per_day", min_value=0, max_value=500)
-    
-    
-    # run the complete validation suite
-    print("Running complete validation suite...")
-    results = ge_df.validate()
-    
-    # catch all failed expectations
-    failed_expectations = []
-    for r in results["results"]:
-        if not r["success"]:
-            expectation_type = r["expectation_config"]["expectation_type"]
-            failed_expectations.append(expectation_type)
-    
-    # print validation summary
-    total_checks = len(results["results"])
-    passed_checks = sum(1 for r in results["results"] if r["success"])
-    failed_checks = total_checks - passed_checks
-    
-    if results["success"]:
-        print(f"Data validation PASSED: {passed_checks}/{total_checks} checks successful")
+NUMERIC_RANGES = {
+    "age": (12, 120),
+    "watch_hours": (0, None),
+    "last_login_days": (0, None),
+    "monthly_fee": (0, 20),
+    "number_of_profiles": (1, 5),
+    "avg_watch_time_per_day": (0, 500),
+}
+
+
+def validate_data(df: pd.DataFrame) -> Tuple[bool, List[str]]:
+    print("Starting data validation...")
+    failed: List[str] = []
+
+    for col in REQUIRED_COLUMNS:
+        if col not in df.columns:
+            failed.append(f"expect_column_to_exist: {col}")
+
+    for col, valid_set in VALID_VALUES.items():
+        if col in df.columns and not set(df[col].dropna().unique()).issubset(valid_set):
+            failed.append(f"expect_column_values_to_be_in_set: {col}")
+
+    for col, (min_val, max_val) in NUMERIC_RANGES.items():
+        if col not in df.columns:
+            continue
+        if min_val is not None and (df[col] < min_val).any():
+            failed.append(f"expect_column_values_to_be_between (min): {col}")
+        if max_val is not None and (df[col] > max_val).any():
+            failed.append(f"expect_column_values_to_be_between (max): {col}")
+
+    passed = len(failed) == 0
+    total = len(REQUIRED_COLUMNS) + len(VALID_VALUES) + len(NUMERIC_RANGES)
+    if passed:
+        print(f"Data validation PASSED: {total}/{total} checks successful")
     else:
-        print(f"Data validation FAILED: {failed_checks}/{total_checks} checks failed")
-        print(f"Failed expectations: {failed_expectations}")
-    
-    return results["success"], failed_expectations
+        print(f"Data validation FAILED: {len(failed)}/{total} checks failed")
+        print(f"Failed expectations: {failed}")
+
+    return passed, failed
