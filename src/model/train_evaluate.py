@@ -1,5 +1,5 @@
 import mlflow
-import mlflow.xgboost
+import mlflow.sklearn
 from xgboost import XGBClassifier
 from sklearn.metrics import (
     recall_score, precision_score, f1_score, roc_auc_score
@@ -29,7 +29,7 @@ def train_evaluate_model(X_train, y_train, X_test, y_test, hyperparams, threshol
     mlflow.log_metric("recall", rec)
     mlflow.log_metric("f1", f1)
     mlflow.log_metric("roc_auc", auc)
-    mlflow.xgboost.log_model(model, "model")
+    mlflow.sklearn.log_model(model, "model", registered_model_name="churn-xgboost")
 
     print(f"Precision: {prec:.4f}, Recall: {rec:.4f}, F1: {f1:.4f}, ROC-AUC: {auc:.4f}")
     

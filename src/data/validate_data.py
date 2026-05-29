@@ -51,7 +51,7 @@ def validate_data(df) -> Tuple[bool, List[str]]:
     ge_df.expect_column_values_to_be_between("last_login_days", min_value=0)
     ge_df.expect_column_values_to_be_between("monthly_fee", min_value=0, max_value=20)
     ge_df.expect_column_values_to_be_between("number_of_profiles", min_value=1, max_value=5)
-    ge_df.expect_column_values_to_be_between("avg_watch_time_per_day", min_value=500)
+    ge_df.expect_column_values_to_be_between("avg_watch_time_per_day", min_value=0, max_value=500)
     
     
     # run the complete validation suite

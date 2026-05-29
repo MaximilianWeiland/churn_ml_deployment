@@ -4,7 +4,6 @@ import time
 import argparse
 import pandas as pd
 import mlflow
-import mlflow.sklearn
 from sklearn.model_selection import train_test_split
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -24,7 +23,8 @@ def main(args):
     
     # configure MLflow
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-    mlruns_path = args.mlflow_uri or f"file://{project_root}/mlruns"
+    _default_uri = f"sqlite:///{os.path.join(project_root, 'mlflow.db')}"
+    mlruns_path = args.mlflow_uri or os.getenv("MLFLOW_TRACKING_URI") or _default_uri
     mlflow.set_tracking_uri(mlruns_path)
     mlflow.set_experiment(args.experiment)
 

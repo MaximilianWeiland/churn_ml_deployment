@@ -1,28 +1,28 @@
-# 1. Use the official lightweight Python base image
-FROM python:3.11-slim
+# 1. Use the official lightweight Python 3.13 base image
+FROM python:3.13-slim
 
-# 2. Set working directory inside the container
+# 2. Copy uv binary from the official uv image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# 3. Set working directory inside the container
 WORKDIR /app
 
-# 3. Copy only dependency file first (for Docker caching)
-COPY requirements.txt .
+# 4. Install dependencies from lock file (no dev deps in production image)
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
-# 4. Install Python dependencies (add curl if you use MLflow local tracking URI)
-RUN pip install --upgrade pip \
-    && pip install -r requirements.txt \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# 5. Copy the entire project into the image
+# 5. Copy the rest of the project
 COPY . .
 
-# make "serving" and "app" importable without the "src." prefix
-# ensures logs are shown in real-time (no buffering).
-# lets you import modules using from app... instead of from src.app....
-ENV PYTHONUNBUFFERED=1 \ 
-    PYTHONPATH=/app/src
+# 6. Install the project itself
+RUN uv sync --frozen --no-dev
 
-# 6. Expose FastAPI port
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src \
+    MLFLOW_TRACKING_URI=sqlite:////app/mlflow.db
+
+# 7. Expose FastAPI port
 EXPOSE 8000
 
-# 7. Run the FastAPI app using uvicorn (change path if needed)
-CMD ["python", "-m", "uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 8. Run the FastAPI app using uvicorn
+CMD [".venv/bin/python", "-m", "uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

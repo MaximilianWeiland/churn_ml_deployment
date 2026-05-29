@@ -11,7 +11,7 @@ def preprocess_data(df: pd.DataFrame, target_col: str = "churned") -> pd.DataFra
             df = df.drop(columns=[col])
 
     # drop monthly fees due to multicollinearity
-    df = df.drop(columns=["monthly_fee"])
+    df = df.drop(columns=["monthly_fee"], errors="ignore")
 
     # target to 0/1 if it's Yes/No
     if target_col in df.columns and df[target_col].dtype == "object":
